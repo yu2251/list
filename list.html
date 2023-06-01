@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>list</title>
+  <!-- css -->
+  <link rel="stylesheet" href="css/stylesheet.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+</head>
+
+<body>
+  <h1>欲しいものおねだりアプリ</h1>
+  <!-- 入力場所-->
+  <form>
+    <div>
+      name: <select name="example1" size="1" type="text" id="name">
+        <option value="">１つ選択</option>
+        <option>スコティ</option>
+        <option>ペルちゃん</option>
+        <option>黒君</option>
+        <option>しろ</option>
+        <option>トラ子</option>
+      </select>
+    </div>
+    <div>
+      item: <input type="text" id="text" placeholder="欲しい物を入力！">
+    </div>
+    <div>
+      shop: <select name="example2" size="1" type="text" id="shop">
+        <option value="">１つ選択</option>
+        <option>amazon</option>
+        <option>楽天</option>
+        <option>マツモトキヨシ</option>
+      </select>
+    </div>
+    <div>
+      price: <input type="number" onblur="kanmaChange(this);" pattern="\d*" id="price" placeholder="価格を入力してね">
+    </div>
+    <div>
+      URL: <input type="url" id="url" placeholder="欲しい商品のURLを貼って！">
+    </div>
+    <div>
+      picture: <input multiple name="imageURL" type="file" id="picture" onChange={OnFileUploadToFirebase}>
+    </div>
+    <div>
+      <button type="button" id="send">おねだり</button>
+    </div>
+  </form>
+
+  <ul id="amount"></ul>
+
+  <!-- データ出力場所 -->
+  <ul id="output"></ul>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    // 日時をいい感じの形式にする関数
+    function convertTimestampToDatetime(timestamp) {
+      const _d = timestamp ? new Date(timestamp * 1000) : new Date();
+      const Y = _d.getFullYear();
+      const m = (_d.getMonth() + 1).toString().padStart(2, '0');
+      const d = _d.getDate().toString().padStart(2, '0');
+      const H = _d.getHours().toString().padStart(2, '0');
+      const i = _d.getMinutes().toString().padStart(2, '0');
+      const s = _d.getSeconds().toString().padStart(2, '0');
+      return `${Y}/${m}/${d}`;
+    }
+  </script>
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    // Cloud Firestore使うことを宣言
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    // import { getStorage } from "firebase/storage";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    // あげるとき注意
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+
+      authDomain: "chat-app26-57074.firebaseapp.com",
+      projectId: "chat-app26-57074",
+      storageBucket: "chat-app26-57074.appspot.com",
+      messagingSenderId: "243134466308",
+      appId: "1:243134466308:web:d00e405d059b2a156e6851"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    // Initialize Cloud Storage and get a reference to the service
+
+    $('#send').on('click', function () {
+      const postData = {
+        name: $('#name').val(),
+        text: $('#text').val(),
+        shop: $('#shop').val(),
+        price: $('#price').val(),
+        url: $('#url').val(),
+        time: serverTimestamp(),
+      };
+      addDoc(collection(db, "chat"), postData);
+      $("#name").val("");
+      $("#text").val("");
+      $("#shop").val("");
+      $("#price").val("");
+      $("#url").val("");
+    });
+
+    // データ取得条件の指定（今回は時間の新しい順に並び替えて取得）
+    const q = query(collection(db, "chat"), orderBy("time", "desc"));
+
+    // データ取得処理
+    onSnapshot(q, (collection(db, "chat"), (querySnapshot) => {
+      console.log(querySnapshot.docs);
+      const documents = [];
+      querySnapshot.docs.forEach(function (doc) {
+        const document = {
+          id: doc.id,
+          data: doc.data(),
+        };
+        documents.push(document);
+
+      });
+
+      console.log(documents);
+
+      const htmlElements = [];
+      documents.forEach(function (doc) {
+        htmlElements.push(`
+            <li id="${doc.id}" class="balloon-009">
+              <img src="images/kuroneko.png" alt="" loading="lazy" decoding="async"/>
+              <p>${doc.data.name} at ${convertTimestampToDatetime(doc.data.time.seconds)}</br>
+              item:<a href="${doc.data.url}"target="_blank">${doc.data.text}</a></br>
+              shop:${doc.data.shop}</br>
+              price:${doc.data.price}円</br></p>
+            </li>
+        `);
+      });
+      $("#output").html(htmlElements);
+    }));
+
+
+  </script>
+
+</body>
+
+</html>
